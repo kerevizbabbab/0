@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Dövüş Oyunu - Özel Haritalar & Zıplama Hasarı</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0f0f13;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #2a2a38;
+        }
+
+        /* Üst Kontrol Paneli ve Harita Seçimi */
+        #ui-bar {
+            background: #181824;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2a2a38;
+        }
+
+        .map-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            background: #2a2a3d;
+            color: #fff;
+            border: 1px solid #444466;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #3f3f5c;
+            border-color: #00ffcc;
+        }
+
+        .btn.active {
+            background: #00ffcc;
+            color: #000;
+            border-color: #00ffcc;
+        }
+
+        /* Can Barları */
+        #health-bars {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .health-container {
+            width: 160px;
+            height: 18px;
+            background: #333;
+            border-radius: 9px;
+            overflow: hidden;
+            border: 1px solid #555;
+            position: relative;
+        }
+
+        .health-fill {
+            height: 100%;
+            width: 100%;
+            transition: width 0.15s ease-out;
+        }
+
+        #player-health { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+        #enemy-health { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
+
+        canvas {
+            display: block;
+            background-color: #000;
+        }
+
+        /* Alt Bilgi Paneli */
+        #controls-hint {
+            background: #181824;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            color: #aaa;
+            border-top: 1px solid #2a2a38;
+        }
+
+        .key {
+            background: #333;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- Üst Arayüz -->
+    <div id="ui-bar">
+        <div class="map-buttons">
+            <button class="btn active" onclick="changeMap('Karanlık Orman')">🌲 Karanlık Orman</button>
+            <button class="btn" onclick="changeMap('Neon Şehir')">🏙️ Neon Şehir</button>
+            <button class="btn" onclick="changeMap('Ejderha Tepesi')">🌋 Ejderha Tepesi</button>
+        </div>
+
+        <div id="health-bars">
+            <div>
+                <small style="color:#00c6ff;">OYUNCU</small>
+                <div class="health-container"><div id="player-health" class="health-fill"></div></div>
+            </div>
+            <div>
+                <small style="color:#ff4b2b;">DÜŞMAN</small>
+                <div class="health-container"><div id="enemy-health" class="health-fill"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Oyun Ekranı -->
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <!-- Kontrol Kılavuzu -->
+    <div id="controls-hint">
+        Hareket: <span class="key">A</span> / <span class="key">D</span> | 
+        Zıpla: <span class="key">W</span> veya <span class="key">SPACE</span> | 
+        Saldır: <span class="key">F</span> / <span class="key">J</span> | 
+        <strong style="color: #00ffcc;">💡 İpucu: Havadayken vurursan KRİTİK HASAR (2x) verirsin!</strong>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// --- Oyun Durumu ve Haritalar ---
+let currentMap = "Karanlık Orman";
+const GROUND_Y = 320;
+
+// Yüzen Hasar Yazıları Efekti
+let floatingTexts = [];
+
+// Tuş Durumları
+const keys = {
+    left: false,
+    right: false,
+    jump: false,
+    attack: false
+};
+
+// --- Oyuncu Nesnesi ---
+const player = {
+    x: 150,
+    y: 200,
+    width: 40,
+    height: 60,
+    vx: 0,
+    vy: 0,
+    speed: 5,
+    jumpStrength: -12,
+    gravity: 0.6,
+    onGround: false,
+    health: 100,
+    attacking: false,
+    attackCooldown: false,
+    attackBox: { width: 50, height: 40 },
+    facing: 'right'
+};
+
+// --- Düşman Nesnesi ---
+const enemy = {
+    x: 600,
+    y: 260,
+    width: 40,
+    height: 60,
+    health: 100,
+    hitTimer: 0
+};
+
+// --- Klavye Dinleyicileri ---
+window.addEventListener("keydown", (e) => {
+    if (e.code === "KeyA" || e.code === "ArrowLeft") { keys.left = true; player.facing = 'left'; }
+    if (e.code === "KeyD" || e.code === "ArrowRight") { keys.right = true; player.facing = 'right'; }
+    if (e.code === "KeyW" || e.code === "Space" || e.code === "ArrowUp") {
+        if (player.onGround) {
+            player.vy = player.jumpStrength;
+            player.onGround = false;
+        }
+    }
+    if ((e.code === "KeyF" || e.code === "KeyJ") && !player.attackCooldown) {
+        performAttack();
+    }
+});
+
+window.addEventListener("keyup", (e) => {
+    if (e.code === "KeyA" || e.code === "ArrowLeft") keys.left = false;
+    if (e.code === "KeyD" || e.code === "ArrowRight") keys.right = false;
+});
+
+// Harita Değiştirme Fonksiyonu
+function changeMap(mapName) {
+    currentMap = mapName;
+    document.querySelectorAll('.map-buttons .btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.includes(mapName));
+    });
+}
+
+// --- Saldırı ve Hasar Hesaplama ---
+function performAttack() {
+    player.attacking = true;
+    player.attackCooldown = true;
+
+    // Vuruş Alanı Hesaplama
+    const attackX = player.facing === 'right' ? player.x + player.width : player.x - player.attackBox.width;
+    
+    // Düşman ile Çakışma Kontrolü (Hitbox)
+    const hit = (
+        attackX < enemy.x + enemy.width &&
+        attackX + player.attackBox.width > enemy.x &&
+        player.y < enemy.y + enemy.height &&
+        player.y + player.height > enemy.y
+    );
+
+    if (hit) {
+        let damage = 12;
+        let isCritical = false;
+
+        // 💥 HAVADAYSA KRİTİK HASAR VERİR
+        if (!player.onGround) {
+            damage = 25; // Yaklaşık 2 katı hasar
+            isCritical = true;
+        }
+
+        enemy.health = Math.max(0, enemy.health - damage);
+        enemy.hitTimer = 10; // Kırmızı yanıp sönme efekti
+
+        // Ekrana Yüzen Hasar Yazısı Ekle
+        floatingTexts.push({
+            text: isCritical ? `💥 KRİTİK! -${damage}` : `-${damage}`,
+            x: enemy.x + 10,
+            y: enemy.y - 10,
+            color: isCritical ? "#ffea00" : "#ffffff",
+            fontSize: isCritical ? 22 : 16,
+            life: 30
+        });
+
+        // Can Barını Güncelle
+        document.getElementById("enemy-health").style.width = enemy.health + "%";
+    }
+
+    // Saldırı Animasyon Süresi ve Bekleme
+    setTimeout(() => { player.attacking = false; }, 150);
+    setTimeout(() => { player.attackCooldown = false; }, 350);
+}
+
+// --- Harita Arka Planlarını Çizme (Çizim Motoru) ---
+function drawBackground() {
+    if (currentMap === "Karanlık Orman") {
+        // Sisli Orman Gradyanı
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, "#08140e");
+        grad.addColorStop(1, "#183324");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Ay
+        ctx.fillStyle = "rgba(230, 255, 230, 0.15)";
+        ctx.beginPath();
+        ctx.arc(680, 80, 50, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ağaç Silüetleri
+        ctx.fillStyle = "#0c1f15";
+        for (let i = 0; i < canvas.width; i += 90) {
+            ctx.beginPath();
+            ctx.moveTo(i, GROUND_Y);
+            ctx.lineTo(i + 35, 120);
+            ctx.lineTo(i + 70, GROUND_Y);
+            ctx.fill();
+        }
+    } 
+    else if (currentMap === "Neon Şehir") {
+        // Gece Şehri Gradyanı
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, "#0d021a");
+        grad.addColorStop(1, "#280b3a");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Binalar ve Neon Işıkları
+        const buildings = [
+            {x: 30, w: 90, h: 220, color: "#ff0055"},
+            {x: 150, w: 120, h: 270, color: "#00f3ff"},
+            {x: 300, w: 80, h: 180, color: "#ffea00"},
+            {x: 420, w: 110, h: 240, color: "#ff0055"},
+            {x: 560, w: 140, h: 280, color: "#00f3ff"}
+        ];
+
+        buildings.forEach(b => {
+            ctx.fillStyle = "#120720";
+            ctx.fillRect(b.x, GROUND_Y - b.h, b.w, b.h);
+            ctx.strokeStyle = b.color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(b.x, GROUND_Y - b.h, b.w, b.h);
+
+            // Pencere Işıkları
+            ctx.fillStyle = b.color;
+            for(let wx = b.x + 10; wx < b.x + b.w - 10; wx += 20) {
+                for(let wy = GROUND_Y - b.h + 20; wy < GROUND_Y - 20; wy += 35) {
+                    if ((wx + wy) % 3 === 0) ctx.fillRect(wx, wy, 8, 12);
+                }
+            }
+        });
+    } 
+    else if (currentMap === "Ejderha Tepesi") {
+        // Volkanik Kırmızı Gradyan
+        let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, "#2b0400");
+        grad.addColorStop(1, "#5e1100");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Volkanik Dağlar
+        ctx.fillStyle = "#1a0200";
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(250, 80);
+        ctx.lineTo(500, GROUND_Y);
+        ctx.fill();
+
+        // Lav Parıltısı (Zemin altı)
+        ctx.fillStyle = "rgba(255, 68, 0, 0.3)";
+        ctx.fillRect(0, GROUND_Y - 10, canvas.width, 10);
+    }
+
+    // Zemin / Platform
+    ctx.fillStyle = "#111116";
+    ctx.fillRect(0, GROUND_Y, canvas.width, canvas.height - GROUND_Y);
+    ctx.fillStyle = "#2a2a38";
+    ctx.fillRect(0, GROUND_Y, canvas.width, 4);
+}
+
+// --- Oyun Döngüsü (Update & Render) ---
+function update() {
+    // Fizik Güncellemeleri
+    if (keys.left) player.x -= player.speed;
+    if (keys.right) player.x += player.speed;
+
+    player.vy += player.gravity;
+    player.y += player.vy;
+
+    // Sahne Sınırları ve Zemin Kontrolü
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+    if (player.y + player.height >= GROUND_Y) {
+        player.y = GROUND_Y - player.height;
+        player.vy = 0;
+        player.onGround = true;
+    }
+
+    if (enemy.hitTimer > 0) enemy.hitTimer--;
+}
+
+function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 1. Arka Planı Çiz
+    drawBackground();
+
+    // 2. Düşmanı Çiz
+    ctx.fillStyle = enemy.hitTimer > 0 ? "#ffffff" : "#ff4b2b";
+    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+    // Düşman Gözü
+    ctx.fillStyle = "#000";
+    ctx.fillRect(enemy.x + 8, enemy.y + 12, 6, 6);
+
+    // 3. Oyuncuyu Çiz
+    ctx.fillStyle = player.onGround ? "#00c6ff" : "#00ffcc"; // Havadayken rengi parlar
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+    
+    // Oyuncu Gözü (Baktığı yöne göre)
+    ctx.fillStyle = "#000";
+    const eyeX = player.facing === 'right' ? player.x + 26 : player.x + 8;
+    ctx.fillRect(eyeX, player.y + 12, 6, 6);
+
+    // 4. Saldırı Efekti (Kılıç Savurma)
+    if (player.attacking) {
+        ctx.fillStyle = !player.onGround ? "rgba(255, 234, 0, 0.7)" : "rgba(255, 255, 255, 0.6)";
+        const attackX = player.facing === 'right' ? player.x + player.width : player.x - player.attackBox.width;
+        ctx.fillRect(attackX, player.y + 10, player.attackBox.width, player.attackBox.height);
+    }
+
+    // 5. Yüzen Hasar Yazılarını Çiz ve Güncelle
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ctx.fillStyle = ft.color;
+        ctx.font = `bold ${ft.fontSize}px sans-serif`;
+        ctx.fillText(ft.text, ft.x, ft.y);
+        
+        ft.y -= 1; // Yukarı doğru kaydır
+        ft.life--;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
+    }
+}
+
+function gameLoop() {
+    update();
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// Oyunu Başlat
+gameLoop();
+</script>
+
+</body>
+</html>
