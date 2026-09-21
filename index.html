@@ -40,6 +40,28 @@
         .glow-text-amber { text-shadow: 0 0 14px rgba(251, 191, 36, 0.8); }
         .glow-box-blue { box-shadow: 0 0 20px rgba(56, 189, 248, 0.4); }
         .glow-box-red { box-shadow: 0 0 20px rgba(248, 113, 113, 0.4); }
+
+        /* Custom Range Slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #1e293b;
+            border-radius: 8px;
+            height: 8px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+            transition: transform 0.1s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
@@ -47,15 +69,20 @@
     <div id="app-container" class="relative w-full max-w-5xl aspect-video max-h-screen rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-950">
         
         <!-- Game Canvas -->
-        <canvas id="gameCanvas" width="960" height="540" class="w-full h-full block"></canvas>
+        <canvas id="gameCanvas" width="960" height="540" class="w-full h-full block cursor-crosshair"></canvas>
+
+        <!-- Top Right Settings Gear Button -->
+        <button id="settings-btn" onclick="openSettingsModal()" title="Ayarlar" class="absolute top-4 right-4 z-40 p-2.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/80 hover:border-amber-400 rounded-xl transition transform hover:scale-110 active:scale-95 shadow-lg flex items-center justify-center group">
+            <span class="text-xl transition-transform duration-500 group-hover:rotate-90">⚙️</span>
+        </button>
 
         <!-- HUD Overlay -->
-        <div id="hud-overlay" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none transition-opacity duration-300 opacity-0">
+        <div id="hud-overlay" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none transition-opacity duration-300 opacity-0 pr-16">
             <!-- Player 1 Status -->
             <div class="w-2/5 flex flex-col gap-1">
                 <div class="flex justify-between items-center text-xs font-orbitron font-bold text-sky-400">
                     <span id="p1-name-hud">MAVİ SAVAŞÇI</span>
-                    <span id="p1-hp-text">500 / 500 HP</span>
+                    <span id="p1-hp-text">1000 / 1000 HP</span>
                 </div>
                 <!-- Health Bar -->
                 <div class="w-full h-5 bg-slate-900/80 rounded-lg p-0.5 border border-sky-500/40 glow-box-blue">
@@ -81,7 +108,7 @@
             <!-- VS, Timer & Stage Info -->
             <div class="flex flex-col items-center">
                 <div id="timer-box" class="px-3 py-1 bg-slate-900/90 border border-slate-700 rounded-xl flex items-center justify-center mb-0.5 shadow-lg">
-                    <span id="timer-text" class="font-orbitron text-2xl font-black text-amber-400 tracking-wider">01:30</span>
+                    <span id="timer-text" class="font-orbitron text-2xl font-black text-amber-400 tracking-wider">02:00</span>
                 </div>
                 <span id="round-score-badge" class="text-[11px] font-orbitron font-bold text-amber-400 tracking-wide mb-0.5">RAUNT 1 (0 - 0)</span>
                 <span id="stage-badge" class="text-[10px] font-orbitron px-2.5 py-0.5 bg-slate-800/80 border border-slate-600/50 rounded-full text-slate-300">Siber Dojo</span>
@@ -90,7 +117,7 @@
             <!-- Player 2 Status -->
             <div class="w-2/5 flex flex-col items-end gap-1">
                 <div class="flex justify-between items-center w-full text-xs font-orbitron font-bold text-rose-400">
-                    <span id="p2-hp-text">500 / 500 HP</span>
+                    <span id="p2-hp-text">1000 / 1000 HP</span>
                     <span id="p2-name-hud">KIRMIZI SAVAŞÇI</span>
                 </div>
                 <!-- Health Bar -->
@@ -120,7 +147,7 @@
             <h1 class="font-orbitron text-4xl sm:text-6xl font-black italic tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-400 via-purple-400 to-rose-500 mb-2 drop-shadow-lg text-center">
                 STICKMAN FIGHTER
             </h1>
-            <p class="text-xs sm:text-sm text-slate-400 font-medium mb-5 text-center tracking-widest uppercase">Gelişmiş Arena Mücadelesi (01:30 Süreli Arena)</p>
+            <p class="text-xs sm:text-sm text-slate-400 font-medium mb-5 text-center tracking-widest uppercase">Gelişmiş Arena Mücadelesi (02:00 Süreli Arena)</p>
 
             <div class="grid grid-cols-2 gap-4 w-full max-w-md mb-6">
                 <div class="flex flex-col gap-1">
@@ -151,23 +178,83 @@
             </div>
         </div>
 
+        <!-- Settings Modal (AYARLAR SEKMESİ) -->
+        <div id="settings-modal" class="absolute inset-0 glass-panel hidden flex-col justify-center items-center p-6 z-50">
+            <div class="w-full max-w-md bg-slate-900/90 rounded-2xl border border-slate-700 p-6 shadow-2xl flex flex-col gap-5">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">⚙️</span>
+                        <h2 class="font-orbitron text-xl font-bold text-amber-400 glow-text-amber">OYUN AYARLARI</h2>
+                    </div>
+                    <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white font-bold text-lg px-2">✕</button>
+                </div>
+
+                <!-- Ses Ayarları Bölümü -->
+                <div class="flex flex-col gap-3 bg-slate-800/50 p-4 rounded-xl border border-slate-700/60">
+                    <h3 class="font-orbitron text-xs font-bold text-sky-400 flex items-center gap-1.5">
+                        <span>🔊</span> SES AYARLARI
+                    </h3>
+
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center text-xs text-slate-300">
+                            <span>Genel Ses Seviyesi</span>
+                            <span id="volume-value-text" class="font-orbitron font-bold text-sky-400">80%</span>
+                        </div>
+                        <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="updateVolumeSetting(this.value)" class="w-full">
+                    </div>
+
+                    <div class="flex items-center justify-between mt-1">
+                        <span class="text-xs text-slate-300">Sesi Kapat / Aç</span>
+                        <button id="mute-toggle-btn" onclick="toggleMuteSetting()" class="px-3 py-1.5 bg-sky-600/80 hover:bg-sky-500 border border-sky-400/50 rounded-lg text-xs font-orbitron font-bold text-white transition flex items-center gap-1">
+                            <span id="mute-icon">🔊</span>
+                            <span id="mute-text">SES AÇIK</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grafik Ayarları Bölümü -->
+                <div class="flex flex-col gap-3 bg-slate-800/50 p-4 rounded-xl border border-slate-700/60">
+                    <h3 class="font-orbitron text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                        <span>🎨</span> GRAFİK KALİTESİ
+                    </h3>
+                    <p class="text-[10px] text-slate-400">Düşük ayar performansı artırır, Yüksek ayar efektleri maks yapar.</p>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectGraphicsQuality('low')" id="gfx-btn-low" class="py-2.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-orbitron text-xs font-bold hover:border-sky-400 transition flex flex-col items-center gap-0.5">
+                            <span>⚡</span>
+                            <span>DÜŞÜK</span>
+                        </button>
+                        <button onclick="selectGraphicsQuality('medium')" id="gfx-btn-medium" class="py-2.5 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 font-orbitron text-xs font-bold hover:border-sky-400 transition flex flex-col items-center gap-0.5">
+                            <span>⚖️</span>
+                            <span>ORTA</span>
+                        </button>
+                        <button onclick="selectGraphicsQuality('high')" id="gfx-btn-high" class="py-2.5 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-300 font-orbitron text-xs font-bold transition flex flex-col items-center gap-0.5">
+                            <span>✨</span>
+                            <span>YÜKSEK</span>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="closeSettingsModal()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-orbitron font-bold rounded-xl transition shadow-lg shadow-orange-500/20 active:scale-95 text-xs">
+                    KAPAT / OYUNA DÖN
+                </button>
+            </div>
+        </div>
+
         <!-- Costume Select Modal -->
         <div id="costume-modal" class="absolute inset-0 glass-panel hidden flex-col justify-center items-center p-6 z-30">
             <h2 class="font-orbitron text-2xl font-bold text-amber-400 mb-2 glow-text-amber">KOSTÜM & AKSESUAR</h2>
             <p class="text-xs text-slate-400 mb-4 font-orbitron">Karakterin için havalı bir aksesuar seç!</p>
             
-            <!-- Player Select Tabs -->
             <div class="flex gap-2 mb-4">
                 <button id="p1-costume-tab" onclick="switchCostumePlayer(1)" class="px-4 py-1.5 rounded-lg font-orbitron text-xs font-bold bg-sky-600 text-white border border-sky-400">OYUNCU 1 (MAVİ)</button>
                 <button id="p2-costume-tab" onclick="switchCostumePlayer(2)" class="px-4 py-1.5 rounded-lg font-orbitron text-xs font-bold bg-slate-800 text-slate-400 border border-slate-700">OYUNCU 2 (KIRMIZI)</button>
             </div>
 
-            <!-- Costume Character Preview Box -->
             <div class="relative w-48 h-48 bg-slate-900/90 rounded-2xl border border-slate-700 shadow-inner flex items-center justify-center mb-4 overflow-hidden">
                 <canvas id="costumePreviewCanvas" width="180" height="180" class="block"></canvas>
             </div>
 
-            <!-- Costume Options Grid -->
             <div class="grid grid-cols-4 gap-2.5 w-full max-w-md mb-5">
                 <button onclick="selectCostume('none')" id="costume-btn-none" class="p-2.5 rounded-xl border-2 border-amber-400 bg-slate-900/80 hover:border-amber-300 transition flex flex-col items-center justify-center gap-1">
                     <span class="text-lg">🚫</span>
@@ -228,27 +315,22 @@
         <div id="stage-modal" class="absolute inset-0 glass-panel hidden flex-col justify-center items-center p-6 z-30">
             <h2 class="font-orbitron text-2xl font-bold text-slate-100 mb-6">ARENA SEÇİMİ</h2>
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full max-w-4xl mb-6">
-                <!-- Cyber Dojo -->
                 <div onclick="selectStage('cyber')" id="stage-card-cyber" class="p-3 rounded-xl border-2 border-sky-500 bg-slate-900/60 cursor-pointer hover:border-sky-400 transition flex flex-col items-center">
                     <div class="w-full h-16 bg-gradient-to-b from-indigo-900 to-purple-950 rounded-lg mb-2 flex items-center justify-center font-orbitron text-[10px] font-bold text-sky-400 border border-sky-500/30">NEON DOJO</div>
                     <span class="font-orbitron text-[11px] font-bold text-slate-200">Siber Dojo</span>
                 </div>
-                <!-- Sunset Rooftop -->
                 <div onclick="selectStage('sunset')" id="stage-card-sunset" class="p-3 rounded-xl border-2 border-slate-800 bg-slate-900/60 cursor-pointer hover:border-amber-400 transition flex flex-col items-center opacity-70 hover:opacity-100">
                     <div class="w-full h-16 bg-gradient-to-b from-purple-900 via-amber-800 to-slate-900 rounded-lg mb-2 flex items-center justify-center font-orbitron text-[10px] font-bold text-amber-300 border border-amber-500/30">GÜN BATIMI</div>
                     <span class="font-orbitron text-[11px] font-bold text-slate-200">Gün Batımı</span>
                 </div>
-                <!-- Volcanic Arena -->
                 <div onclick="selectStage('volcano')" id="stage-card-volcano" class="p-3 rounded-xl border-2 border-slate-800 bg-slate-900/60 cursor-pointer hover:border-rose-500 transition flex flex-col items-center opacity-70 hover:opacity-100">
                     <div class="w-full h-16 bg-gradient-to-b from-red-950 via-rose-900 to-slate-950 rounded-lg mb-2 flex items-center justify-center font-orbitron text-[10px] font-bold text-rose-400 border border-rose-500/30">VOLKANİK</div>
                     <span class="font-orbitron text-[11px] font-bold text-slate-200">Volkanik</span>
                 </div>
-                <!-- Ice Citadel (YENİ) -->
                 <div onclick="selectStage('ice')" id="stage-card-ice" class="p-3 rounded-xl border-2 border-slate-800 bg-slate-900/60 cursor-pointer hover:border-cyan-400 transition flex flex-col items-center opacity-70 hover:opacity-100">
                     <div class="w-full h-16 bg-gradient-to-b from-cyan-950 via-sky-900 to-slate-950 rounded-lg mb-2 flex items-center justify-center font-orbitron text-[10px] font-bold text-cyan-300 border border-cyan-400/30">BUZ KALESİ</div>
                     <span class="font-orbitron text-[11px] font-bold text-slate-200">Buz Kalesi</span>
                 </div>
-                <!-- Forest Temple (YENİ) -->
                 <div onclick="selectStage('forest')" id="stage-card-forest" class="p-3 rounded-xl border-2 border-slate-800 bg-slate-900/60 cursor-pointer hover:border-emerald-400 transition flex flex-col items-center opacity-70 hover:opacity-100">
                     <div class="w-full h-16 bg-gradient-to-b from-emerald-950 via-teal-900 to-slate-950 rounded-lg mb-2 flex items-center justify-center font-orbitron text-[10px] font-bold text-emerald-400 border border-emerald-500/30">ORMAN</div>
                     <span class="font-orbitron text-[11px] font-bold text-slate-200">Orman Tapınağı</span>
@@ -261,19 +343,17 @@
         <div id="controls-modal" class="absolute inset-0 glass-panel hidden flex-col justify-center items-center p-6 z-30">
             <h2 class="font-orbitron text-2xl font-bold text-slate-100 mb-4">KONTROL LİSTESİ</h2>
             <div class="grid grid-cols-2 gap-6 w-full max-w-xl text-xs sm:text-sm mb-6">
-                <!-- P1 Controls -->
                 <div class="bg-slate-900/60 p-4 rounded-xl border border-sky-500/30">
                     <h3 class="font-orbitron text-sky-400 font-bold mb-3 border-b border-sky-500/20 pb-1">OYUNCU 1 (MAVİ)</h3>
                     <ul class="space-y-1.5 text-slate-300">
                         <li><b class="text-white">A / D:</b> Sol / Sağ Hareket</li>
                         <li><b class="text-white">W:</b> Zıplama</li>
                         <li><b class="text-white">SHIFT:</b> Bloklama (%80 Engelleme)</li>
-                        <li><b class="text-white">SPACE:</b> Yumruk (2sn Tut = 20 HP Güçlü Vuruş)</li>
+                        <li><b class="text-white">SPACE / Sol Tık:</b> Yumruk (2sn Tut = 20 HP Güçlü Vuruş)</li>
                         <li><b class="text-white">F:</b> Tekme (25 HP Sert Darbe)</li>
                         <li><b class="text-white">G:</b> Süper Özel Harekat</li>
                     </ul>
                 </div>
-                <!-- P2 Controls -->
                 <div class="bg-slate-900/60 p-4 rounded-xl border border-rose-500/30">
                     <h3 class="font-orbitron text-rose-400 font-bold mb-3 border-b border-rose-500/20 pb-1">OYUNCU 2 (KIRMIZI)</h3>
                     <ul class="space-y-1.5 text-slate-300">
@@ -295,6 +375,9 @@
             <h2 class="font-orbitron text-3xl font-black text-amber-400 mb-6 tracking-wider">OYUN DURAKLATILDI</h2>
             <div class="flex flex-col gap-3 w-56">
                 <button onclick="togglePause()" class="py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-orbitron font-bold rounded-xl transition">DEVAM ET</button>
+                <button onclick="openSettingsModal()" class="py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-orbitron font-semibold rounded-xl transition flex items-center justify-center gap-2">
+                    <span>⚙️</span> AYARLAR
+                </button>
             </div>
         </div>
 
@@ -330,7 +413,9 @@
         const GROUND_Y = 440;
         const GRAVITY = 0.65;
 
-        let gameState = 'MENU'; // 'MENU', 'PLAYING', 'PAUSED', 'GAMEOVER'
+        let gameState = 'MENU'; // 'MENU', 'PLAYING', 'PAUSED', 'GAMEOVER', 'SETTINGS'
+        let previousStateBeforeSettings = 'MENU';
+
         let isBotMode = false;
         let botDifficulty = 'zorlayici'; // 'kolay', 'zorlayici', 'imkansiz'
         const botNames = ['bot-1', 'bot-2', 'bot-3'];
@@ -343,13 +428,23 @@
         let p2Costume = 'none';
         let activeCostumePlayer = 1;
 
+        // Settings State
+        let soundSettings = {
+            volume: 0.8,
+            isMuted: false
+        };
+
+        let graphicsSettings = {
+            quality: 'high' // 'low', 'medium', 'high'
+        };
+
         // Round System State Variables
         let p1RoundsWon = 0;
         let p2RoundsWon = 0;
         let currentRound = 1;
-        const TARGET_ROUNDS = 2; // 2 puan alan kazanır
+        const TARGET_ROUNDS = 2;
 
-        let gameTimer = 90; // 01:30
+        let gameTimer = 120; // 02:00
         let lastTimeCheck = 0;
 
         let keys = {};
@@ -367,17 +462,25 @@
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
         }
 
         function playTone(freq, type, duration, startVol = 0.1, endVol = 0.001) {
-            if (!audioCtx) return;
+            if (!audioCtx || soundSettings.isMuted || soundSettings.volume <= 0) return;
             try {
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(startVol, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(endVol, audioCtx.currentTime + duration);
+
+                let effectiveStartVol = startVol * soundSettings.volume;
+                let effectiveEndVol = Math.max(0.0001, endVol * soundSettings.volume);
+
+                gain.gain.setValueAtTime(effectiveStartVol, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(effectiveEndVol, audioCtx.currentTime + duration);
+                
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
@@ -463,13 +566,28 @@
             update() {
                 this.x += this.vx;
                 if (this.x < 0 || this.x > canvas.width) this.active = false;
-                if (Math.random() < 0.6) particles.push(new Particle(this.x, this.y, this.color));
+                
+                // Spawn particles based on graphics settings
+                let spawnChance = graphicsSettings.quality === 'high' ? 0.6 : (graphicsSettings.quality === 'medium' ? 0.3 : 0.05);
+                if (Math.random() < spawnChance) {
+                    particles.push(new Particle(this.x, this.y, this.color));
+                }
             }
             draw(ctx) {
                 ctx.save();
                 ctx.fillStyle = this.color;
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 15;
+                
+                // Shadow / Glow adaptation based on graphics settings
+                if (graphicsSettings.quality === 'high') {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 15;
+                } else if (graphicsSettings.quality === 'medium') {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 6;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
+
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fill();
@@ -478,7 +596,11 @@
         }
 
         function createHitSparks(x, y, color, count = 8) {
-            for (let i = 0; i < count; i++) {
+            let adjustedCount = count;
+            if (graphicsSettings.quality === 'medium') adjustedCount = Math.ceil(count * 0.5);
+            if (graphicsSettings.quality === 'low') adjustedCount = Math.min(count, 2);
+
+            for (let i = 0; i < adjustedCount; i++) {
                 particles.push(new Particle(x, y, color));
             }
         }
@@ -502,10 +624,10 @@
                 this.height = 90;
                 this.color = color;
                 this.isP1 = isP1;
-                this.costume = 'none'; // Aksesuar
+                this.costume = 'none';
                 
-                this.maxHealth = 500;
-                this.health = 500;
+                this.maxHealth = 1000;
+                this.health = 1000;
                 this.energy = 0;
                 this.facingRight = isP1;
 
@@ -529,8 +651,8 @@
                 this.y = this.startY;
                 this.vx = 0;
                 this.vy = 0;
-                this.maxHealth = 500;
-                this.health = 500;
+                this.maxHealth = 1000;
+                this.health = 1000;
                 this.energy = 0;
                 this.facingRight = this.isP1;
                 this.isBlocking = false;
@@ -693,8 +815,16 @@
                 // Draw Equipped Costume / Accessory
                 this.drawCostume(ctx, centerX, headY, armDir);
 
-                ctx.shadowColor = this.color;
-                ctx.shadowBlur = 12;
+                // Graphics shadow glow quality settings
+                if (graphicsSettings.quality === 'high') {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 12;
+                } else if (graphicsSettings.quality === 'medium') {
+                    ctx.shadowColor = this.color;
+                    ctx.shadowBlur = 5;
+                } else {
+                    ctx.shadowBlur = 0;
+                }
 
                 // Spine
                 ctx.beginPath();
@@ -756,7 +886,6 @@
 
                 ctx.save();
                 if (this.costume === 'crown') {
-                    // 1. KRAL TACI (Crown)
                     let topY = headY - 14;
                     ctx.fillStyle = '#f59e0b';
                     ctx.strokeStyle = '#fbbf24';
@@ -774,55 +903,46 @@
                     ctx.fill();
                     ctx.stroke();
 
-                    // Tac üzerindeki kırmızı mücevherler
                     ctx.fillStyle = '#ef4444';
                     ctx.beginPath(); ctx.arc(centerX - 14, topY - 12, 2, 0, Math.PI * 2); ctx.fill();
                     ctx.beginPath(); ctx.arc(centerX, topY - 15, 2.5, 0, Math.PI * 2); ctx.fill();
                     ctx.beginPath(); ctx.arc(centerX + 14, topY - 12, 2, 0, Math.PI * 2); ctx.fill();
 
                 } else if (this.costume === 'duck') {
-                    // 2. ÖRDEK OYUNCAK (Duck Toy on head)
                     let duckX = centerX;
                     let duckY = headY - 16;
 
-                    // Ördek Gövdesi
                     ctx.fillStyle = '#facc15';
                     ctx.beginPath();
                     ctx.arc(duckX, duckY, 7, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Ördek Kafası
                     let headX = duckX + armDir * 4;
                     let headYPos = duckY - 5;
                     ctx.beginPath();
                     ctx.arc(headX, headYPos, 4.5, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Ördek Gagası (Turuncu)
                     ctx.fillStyle = '#f97316';
                     ctx.beginPath();
                     ctx.arc(headX + armDir * 4, headYPos + 1, 2, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Ördek Gözü
                     ctx.fillStyle = '#000000';
                     ctx.beginPath();
                     ctx.arc(headX + armDir * 1.5, headYPos - 1.5, 1, 0, Math.PI * 2);
                     ctx.fill();
 
                 } else if (this.costume === 'bandana') {
-                    // 3. BANDANA / BANDAJ (Bandana around head)
                     ctx.fillStyle = '#ef4444';
                     ctx.strokeStyle = '#dc2626';
                     ctx.lineWidth = 1;
 
-                    // Alın Bandı
                     ctx.beginPath();
                     ctx.rect(centerX - 13, headY - 6, 26, 6);
                     ctx.fill();
                     ctx.stroke();
 
-                    // Arkaya Sarkan Bandana Şeritleri
                     let ribbonX = centerX - armDir * 12;
                     ctx.beginPath();
                     ctx.moveTo(ribbonX, headY - 3);
@@ -853,7 +973,29 @@
             floatingTexts = [];
         }
 
+        canvas.addEventListener('mousedown', (e) => {
+            initAudio();
+            if (gameState === 'PLAYING' && e.button === 0) {
+                p1HoldStart = Date.now();
+                p1IsHolding = true;
+                p1.isCharging = true;
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (gameState === 'PLAYING' && e.button === 0) {
+                if (p1IsHolding) {
+                    let duration = Date.now() - p1HoldStart;
+                    let isCharged = duration >= 2000 && p1.chargedAttacksLeft > 0;
+                    p1.punch(isCharged);
+                }
+                p1IsHolding = false;
+                p1.isCharging = false;
+            }
+        });
+
         window.addEventListener('keydown', (e) => {
+            initAudio();
             keys[e.code] = true;
 
             if (gameState === 'PLAYING') {
@@ -938,6 +1080,8 @@
             keys = {};
             if (p1) p1.isBlocking = false;
             if (p2) p2.isBlocking = false;
+            p1IsHolding = false;
+            if (p1) p1.isCharging = false;
         });
 
         function selectDifficulty(diff) {
@@ -963,7 +1107,6 @@
 
             p2.facingRight = dx > 0;
 
-            // Difficulty parameter definitions
             let blockProb = 0.35;
             let attackCooldownFrames = 100;
             let jumpProb = 0.015;
@@ -972,39 +1115,35 @@
 
             if (botDifficulty === 'kolay') {
                 blockProb = 0.10;
-                attackCooldownFrames = 160; // Yavaş vuruş aralığı (~2.6sn)
+                attackCooldownFrames = 160;
                 jumpProb = 0.005;
                 moveSpeed = 3;
                 specialProb = 0.03;
             } else if (botDifficulty === 'imkansiz') {
-                blockProb = 0.75; // Yüksek engelleme olasılığı
-                attackCooldownFrames = 35; // Şimşek hızlı seri vuruşlar (~0.5sn)
+                blockProb = 0.75;
+                attackCooldownFrames = 35;
                 jumpProb = 0.03;
                 moveSpeed = 5;
                 specialProb = 0.35;
             }
 
-            // Blocking reaction
             if (p1.isAttacking && dist < 90 && Math.random() < blockProb) {
                 p2.isBlocking = true;
             } else {
                 p2.isBlocking = false;
             }
 
-            // Movement tracking
             if (dist > 55 && !p2.isBlocking) {
                 p2.vx = dx > 0 ? moveSpeed : -moveSpeed;
             } else {
                 p2.vx = 0;
             }
 
-            // Jump decision
             if ((p1.y < GROUND_Y - 140 || Math.random() < jumpProb) && p2.vy === 0 && dist < 220 && !p2.isBlocking) {
                 p2.vy = -13;
                 playJumpSound();
             }
 
-            // Attack decisions based on difficulty
             if (p2.attackCooldown <= 0 && p2.hurtTime <= 0 && !p2.isBlocking) {
                 if (p2.energy >= 100 && dist < 280 && Math.random() < specialProb) {
                     p2.special();
@@ -1035,10 +1174,12 @@
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < canvas.width; i += 40) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, GROUND_Y); ctx.stroke();
+                if (graphicsSettings.quality !== 'low') {
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < canvas.width; i += 40) {
+                        ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, GROUND_Y); ctx.stroke();
+                    }
                 }
 
                 ctx.fillStyle = '#0f172a';
@@ -1087,8 +1228,9 @@
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                let flakeCount = graphicsSettings.quality === 'high' ? 25 : (graphicsSettings.quality === 'medium' ? 12 : 4);
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-                for(let i = 0; i < 25; i++) {
+                for(let i = 0; i < flakeCount; i++) {
                     let sx = (Math.sin(i * 99 + Date.now() * 0.001) * 0.5 + 0.5) * canvas.width;
                     let sy = ((i * 30 + Date.now() * 0.05) % canvas.height);
                     ctx.beginPath();
@@ -1109,12 +1251,15 @@
                 ctx.fillStyle = grad;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                for(let i = 0; i < 15; i++) {
+                let fireflyCount = graphicsSettings.quality === 'high' ? 15 : (graphicsSettings.quality === 'medium' ? 8 : 2);
+                for(let i = 0; i < fireflyCount; i++) {
                     let fx = (Math.sin(i * 47 + Date.now() * 0.0015) * 0.5 + 0.5) * canvas.width;
                     let fy = GROUND_Y - 50 - (Math.cos(i * 31 + Date.now() * 0.002) * 0.5 + 0.5) * 200;
                     ctx.fillStyle = 'rgba(52, 211, 153, 0.8)';
-                    ctx.shadowColor = '#34d399';
-                    ctx.shadowBlur = 8;
+                    if (graphicsSettings.quality === 'high') {
+                        ctx.shadowColor = '#34d399';
+                        ctx.shadowBlur = 8;
+                    }
                     ctx.beginPath();
                     ctx.arc(fx, fy, 3, 0, Math.PI * 2);
                     ctx.fill();
@@ -1152,10 +1297,9 @@
         function updateHUD() {
             document.getElementById('p1-health').style.width = (p1.health / p1.maxHealth * 100) + '%';
             document.getElementById('p1-energy').style.width = p1.energy + '%';
-            document.getElementById('p1-hp-text').innerText = `${Math.ceil(p1.health)} / 500 HP`;
+            document.getElementById('p1-hp-text').innerText = `${Math.ceil(p1.health)} / 1000 HP`;
             document.getElementById('p1-charged-count').innerText = `GÜÇLÜ: ${p1.chargedAttacksLeft}/5`;
 
-            // Round Wins Indicators for P1
             const p1r1 = document.getElementById('p1-r1');
             const p1r2 = document.getElementById('p1-r2');
             if (p1r1) p1r1.className = p1RoundsWon >= 1 ? "w-3 h-3 rounded-full border border-sky-400 bg-sky-400 shadow-sm shadow-sky-400" : "w-3 h-3 rounded-full border border-sky-400 bg-slate-800";
@@ -1167,10 +1311,9 @@
 
             document.getElementById('p2-health').style.width = (p2.health / p2.maxHealth * 100) + '%';
             document.getElementById('p2-energy').style.width = p2.energy + '%';
-            document.getElementById('p2-hp-text').innerText = `${Math.ceil(p2.health)} / 500 HP`;
+            document.getElementById('p2-hp-text').innerText = `${Math.ceil(p2.health)} / 1000 HP`;
             document.getElementById('p2-charged-count').innerText = `GÜÇLÜ: ${p2.chargedAttacksLeft}/5`;
 
-            // Round Wins Indicators for P2
             const p2r1 = document.getElementById('p2-r1');
             const p2r2 = document.getElementById('p2-r2');
             if (p2r1) p2r1.className = p2RoundsWon >= 1 ? "w-3 h-3 rounded-full border border-rose-400 bg-rose-500 shadow-sm shadow-rose-500" : "w-3 h-3 rounded-full border border-rose-400 bg-slate-800";
@@ -1294,6 +1437,87 @@
             ctx.restore();
         }
 
+        // Settings Modal Handlers
+        function openSettingsModal() {
+            initAudio();
+            if (gameState !== 'SETTINGS') {
+                previousStateBeforeSettings = gameState;
+                if (gameState === 'PLAYING') {
+                    gameState = 'PAUSED';
+                }
+            }
+            openModal('settings-modal');
+            updateSettingsUI();
+        }
+
+        function closeSettingsModal() {
+            closeModal('settings-modal');
+            if (previousStateBeforeSettings === 'PLAYING') {
+                gameState = 'PLAYING';
+                lastTimeCheck = Date.now();
+            } else {
+                gameState = previousStateBeforeSettings;
+            }
+        }
+
+        function updateVolumeSetting(val) {
+            soundSettings.volume = parseFloat(val) / 100;
+            document.getElementById('volume-value-text').innerText = `${val}%`;
+            if (soundSettings.volume > 0 && soundSettings.isMuted) {
+                soundSettings.isMuted = false;
+                updateMuteUI();
+            }
+        }
+
+        function toggleMuteSetting() {
+            soundSettings.isMuted = !soundSettings.isMuted;
+            updateMuteUI();
+        }
+
+        function updateMuteUI() {
+            const btn = document.getElementById('mute-toggle-btn');
+            const icon = document.getElementById('mute-icon');
+            const text = document.getElementById('mute-text');
+
+            if (soundSettings.isMuted) {
+                icon.innerText = '🔇';
+                text.innerText = 'SES KAPALI';
+                btn.className = "px-3 py-1.5 bg-rose-600/80 hover:bg-rose-500 border border-rose-400/50 rounded-lg text-xs font-orbitron font-bold text-white transition flex items-center gap-1";
+            } else {
+                icon.innerText = '🔊';
+                text.innerText = 'SES AÇIK';
+                btn.className = "px-3 py-1.5 bg-sky-600/80 hover:bg-sky-500 border border-sky-400/50 rounded-lg text-xs font-orbitron font-bold text-white transition flex items-center gap-1";
+            }
+        }
+
+        function selectGraphicsQuality(quality) {
+            graphicsSettings.quality = quality;
+            updateGraphicsUI();
+        }
+
+        function updateGraphicsUI() {
+            ['low', 'medium', 'high'].forEach(q => {
+                const btn = document.getElementById(`gfx-btn-${q}`);
+                if (!btn) return;
+                if (q === graphicsSettings.quality) {
+                    btn.className = "py-2.5 rounded-lg border-2 border-amber-400 bg-amber-500/20 text-amber-300 font-orbitron text-xs font-bold transition flex flex-col items-center gap-0.5 shadow-md shadow-amber-500/10";
+                } else {
+                    btn.className = "py-2.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 font-orbitron text-xs font-bold hover:border-sky-400 transition flex flex-col items-center gap-0.5 opacity-80 hover:opacity-100";
+                }
+            });
+        }
+
+        function updateSettingsUI() {
+            const slider = document.getElementById('volume-slider');
+            const volValText = document.getElementById('volume-value-text');
+            if (slider && volValText) {
+                slider.value = Math.round(soundSettings.volume * 100);
+                volValText.innerText = `${slider.value}%`;
+            }
+            updateMuteUI();
+            updateGraphicsUI();
+        }
+
         function startGameWithMode(mode) {
             closeModal('mode-modal');
             if (mode === 'bot') {
@@ -1312,7 +1536,7 @@
         function startGame() {
             initAudio();
             gameState = 'PLAYING';
-            gameTimer = 90;
+            gameTimer = 120;
             lastTimeCheck = Date.now();
 
             const p1Input = document.getElementById('p1-name-input').value.trim();
@@ -1343,7 +1567,6 @@
                 roundWinner = 2;
                 p2RoundsWon++;
             } else {
-                // Beraberlik durumunda ikisi de can eşit kaldıysa
                 roundWinner = 0;
             }
 
@@ -1397,7 +1620,7 @@
             document.getElementById('game-over-screen').classList.add('hidden');
             document.getElementById('game-over-screen').style.display = 'none';
             gameState = 'PLAYING';
-            gameTimer = 90;
+            gameTimer = 120;
             lastTimeCheck = Date.now();
             updateTimerUI();
             resetFighters();
@@ -1444,7 +1667,6 @@
             if (stage === 'forest') badge.innerText = "Orman Tapınağı";
         }
 
-        // --- KOSTÜM MANTIĞI & ÖNİZLEME ---
         function switchCostumePlayer(pNum) {
             activeCostumePlayer = pNum;
             const tab1 = document.getElementById('p1-costume-tab');
@@ -1502,7 +1724,6 @@
             let previewColor = activeCostumePlayer === 1 ? '#38bdf8' : '#f43f5e';
             let currentCostume = activeCostumePlayer === 1 ? p1Costume : p2Costume;
 
-            // Önizleme Stickman Çizimi
             const tempFighter = new Fighter(70, 45, previewColor, activeCostumePlayer === 1);
             tempFighter.costume = currentCostume;
             tempFighter.draw(pCtx);
